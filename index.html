@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGVB Financial Calculator - By Rahul Nath</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: #0f172a;
+        }
+        @media print {
+            body { background: white; }
+            button { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        // Icons as inline SVGs
+        const Calculator = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="16" height="20" x="4" y="2" rx="2"/>
+                <line x1="8" x2="16" y1="6" y2="6"/>
+            </svg>
+        );
+
+        const TrendingUp = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+                <polyline points="16 7 22 7 22 13"/>
+            </svg>
+        );
+
+        const IndianRupee = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 3h12"/>
+                <path d="M6 8h12"/>
+                <path d="m6 13 8.5 8"/>
+                <path d="M6 13h3"/>
+                <path d="M9 13c6.667 0 6.667-10 0-10"/>
+            </svg>
+        );
+
+        const Calendar = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" x2="16" y1="2" y2="6"/>
+                <line x1="8" x2="8" y1="2" y2="6"/>
+                <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+        );
+
+        const Download = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+        );
+
+        const Printer = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect width="12" height="8" x="6" y="14"/>
+            </svg>
+        );
+
+        const Landmark = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" x2="21" y1="22" y2="22"/>
+                <line x1="6" x2="6" y1="18" y2="11"/>
+                <line x1="10" x2="10" y1="18" y2="11"/>
+                <line x1="14" x2="14" y1="18" y2="11"/>
+                <line x1="18" x2="18" y1="18" y2="11"/>
+                <polygon points="12 2 20 7 4 7"/>
+            </svg>
+        );
+
+        const FinancialCalculator = () => {
+            const [activeTab, setActiveTab] = useState('loan');
+            const [loanType, setLoanType] = useState('');
+            const [loanAmount, setLoanAmount] = useState('');
+            const [emiMonths, setEmiMonths] = useState('');
+            
+            const [depositType, setDepositType] = useState('rd');
+            const [depositAmount, setDepositAmount] = useState('');
+            const [depositPeriod, setDepositPeriod] = useState('');
+            const [isSeniorCitizen, setIsSeniorCitizen] = useState(false);
+
+            const calculateProcessingFee = (amount) => {
+                if (!amount) return 0;
+                return parseFloat(amount) * 0.0118;
+            };
+
+            const calculateDocumentationCharge = (amount) => {
+                if (!amount) return 0;
+                const amt = parseFloat(amount);
+                
+                if (amt <= 25000) return 0;
+                if (amt > 25000 && amt <= 50000) return 236;
+                if (amt > 50000 && amt <= 200000) return 1416;
+                if (amt > 200000 && amt <= 500000) return 3304;
+                if (amt > 500000 && amt <= 2000000) return 3540;
+                if (amt > 2000000 && amt <= 10000000) return 5900;
+                if (amt > 10000000 && amt <= 50000000) return 8260;
+                if (amt > 50000000) return 23600;
+                
+                return 0;
+            };
+
+            const getFDInterestRate = (months, amount, isSenior) => {
+                let baseRate = 0;
+                
+                if (months >= 0.23 && months < 0.5) {
+                    baseRate = 3.00;
+                } else if (months >= 0.5 && months < 1.5) {
+                    baseRate = 3.00;
+                } else if (months >= 1.5 && months < 2) {
+                    baseRate = 3.25;
+                } else if (months >= 2 && months < 6) {
+                    baseRate = 3.50;
+                } else if (months >= 6 && months < 9) {
+                    baseRate = 4.50;
+                } else if (months >= 9 && months < 12) {
+                    baseRate = 6.00;
+                } else if (months >= 12 && months < 36) {
+                    baseRate = 6.25;
+                } else if (months >= 36 && months <= 60) {
+                    baseRate = 7.00;
+                } else if (months > 60 && months <= 120) {
+                    baseRate = 6.00;
+                }
+                
+                if (isSenior && months >= 12) {
+                    baseRate += 0.50;
+                }
+                
+                return baseRate;
+            };
+
+            const calculateFDMaturity = (principal, rate, months) => {
+                const quarters = months / 3;
+                const quarterlyRate = rate / 4 / 100;
+                const maturityAmount = principal * Math.pow(1 + quarterlyRate, quarters);
+                return maturityAmount;
+            };
+
+            const calculateRDMaturity = (monthlyDeposit, rate, months) => {
+                const n = months;
+                const r = rate / 100 / 12;
+                const maturityAmount = monthlyDeposit * (((Math.pow(1 + r, n) - 1) / r) * (1 + r));
+                return maturityAmount;
+            };
+
+            const loanCategories = {
+                'MCLR Loans': [
+                    { name: 'Term Loan (Non-Priority) - Up to ₹25,000', rate: 11.00, category: 'term_loan_25k' },
+                    { name: 'Term Loan (Non-Priority) - ₹25,000 to ₹5 Lakh', rate: 11.25, category: 'term_loan_5l' },
+                    { name: 'Term Loan (Non-Priority) - ₹5 Lakh to ₹25 Lakh', rate: 12.25, category: 'term_loan_25l' },
+                    { name: 'MSME - Up to ₹25,000', rate: 8.75, category: 'msme_25k' },
+                    { name: 'MSME - ₹25,000 to ₹2 Lakh', rate: 9.85, category: 'msme_2l' },
+                    { name: 'MSME - ₹2 Lakh to ₹5 Lakh', rate: 10.35, category: 'msme_5l' },
+                    { name: 'MSME - ₹5 Lakh to ₹25 Lakh', rate: 11.05, category: 'msme_25l' },
+                    { name: 'Agricultural Advances - Up to ₹50,000', rate: 8.90, category: 'agri_50k' },
+                    { name: 'Agricultural Advances - ₹50,000 to ₹2 Lakh', rate: 10.25, category: 'agri_2l' },
+                    { name: 'Agricultural Advances - ₹2 Lakh to ₹5 Lakh', rate: 10.85, category: 'agri_5l' },
+                    { name: 'Agricultural Advances - ₹5 Lakh to ₹10 Lakh', rate: 11.35, category: 'agri_10l' },
+                    { name: 'Agricultural Advances - ₹10 Lakh to ₹25 Lakh', rate: 11.85, category: 'agri_25l' },
+                    { name: 'SHG Non-Sponsored - Up to ₹3 Lakh', rate: 11.50, category: 'shg_3l' },
+                    { name: 'SHG Non-Sponsored - ₹3 Lakh to ₹5 Lakh', rate: 13.70, category: 'shg_5l' },
+                    { name: 'SHG Non-Sponsored - ₹5 Lakh to ₹10 Lakh', rate: 12.30, category: 'shg_10l' },
+                    { name: 'SHG under ASRLM - Up to ₹3 Lakh', rate: 7.00, category: 'shg_asrlm_3l' },
+                    { name: 'SHG under ASRLM - ₹3 Lakh to ₹5 Lakh', rate: 8.70, category: 'shg_asrlm_5l' },
+                    { name: 'Two Wheeler', rate: 8.70, category: 'two_wheeler' },
+                    { name: 'Rooftop Solar - Up to 3KW', rate: 8.70, category: 'solar_3kw' },
+                    { name: 'Rooftop Solar - 3KW to 10KW', rate: 9.70, category: 'solar_10kw' },
+                    { name: 'Staff Personal Demand Loan', rate: 8.70, category: 'staff_pdl' },
+                    { name: 'Staff Housing Loan - Up to ₹40 Lakh', rate: 5.50, category: 'staff_housing_40l' },
+                ],
+                'RLLR Loans': [
+                    { name: 'Car Loan', rate: 7.50, category: 'car_loan' },
+                    { name: 'Car Loan - EV (Electric Vehicle)', rate: 7.25, category: 'car_loan_ev' },
+                    { name: 'Housing Loan - 1st Unit', rate: 7.75, category: 'housing_1st' },
+                    { name: 'Housing Loan - 2nd Unit', rate: 8.25, category: 'housing_2nd' },
+                    { name: 'Education Loan', rate: 7.75, category: 'education' },
+                    { name: 'Personal Loan', rate: 13.25, category: 'personal' },
+                    { name: 'Personal Loan to Pensioner', rate: 12.70, category: 'personal_pensioner' },
+                ],
+                'Special Schemes': [
+                    { name: 'AGB Jibika Rin Achoni Scheme', rate: 16.00, category: 'jibika' },
+                    { name: 'AGVB JLG Scheme', rate: 16.00, category: 'jlg' },
+                ]
+            };
+
+            const calculateEMI = (principal, annualRate, months) => {
+                const monthlyRate = annualRate / 12 / 100;
+                const emi = principal * monthlyRate * Math.pow(1 + monthlyRate, months) / (Math.pow(1 + monthlyRate, months) - 1);
+                return emi;
+            };
+
+            const results = useMemo(() => {
+                if (!loanAmount || !emiMonths || !loanType) return null;
+
+                const principal = parseFloat(loanAmount);
+                const months = parseInt(emiMonths);
+                
+                let selectedLoan = null;
+                for (const category in loanCategories) {
+                    const found = loanCategories[category].find(loan => loan.category === loanType);
+                    if (found) {
+                        selectedLoan = found;
+                        break;
+                    }
+                }
+
+                if (!selectedLoan || principal <= 0 || months <= 0) return null;
+
+                const emi = calculateEMI(principal, selectedLoan.rate, months);
+                const totalPayment = emi * months;
+                const totalInterest = totalPayment - principal;
+                
+                const processingFee = calculateProcessingFee(principal);
+                const documentationCharge = calculateDocumentationCharge(principal);
+                const totalFees = processingFee + documentationCharge;
+                const totalCostWithFees = totalPayment + totalFees;
+
+                return {
+                    emi: emi.toFixed(2),
+                    totalPayment: totalPayment.toFixed(2),
+                    totalInterest: totalInterest.toFixed(2),
+                    interestRate: selectedLoan.rate,
+                    principal: principal.toFixed(2),
+                    loanName: selectedLoan.name,
+                    processingFee: processingFee.toFixed(2),
+                    documentationCharge: documentationCharge.toFixed(2),
+                    totalFees: totalFees.toFixed(2),
+                    totalCostWithFees: totalCostWithFees.toFixed(2)
+                };
+            }, [loanAmount, emiMonths, loanType]);
+
+            const depositResults = useMemo(() => {
+                if (!depositAmount || !depositPeriod) return null;
+
+                const amount = parseFloat(depositAmount);
+                const months = parseInt(depositPeriod);
+
+                if (amount <= 0 || months <= 0) return null;
+
+                let maturityAmount = 0;
+                let interestEarned = 0;
+                let interestRate = 0;
+
+                if (depositType === 'ripc') {
+                    interestRate = getFDInterestRate(months, amount, isSeniorCitizen);
+                    maturityAmount = calculateFDMaturity(amount, interestRate, months);
+                    interestEarned = maturityAmount - amount;
+                } else if (depositType === 'rd') {
+                    interestRate = getFDInterestRate(months, amount * months, isSeniorCitizen);
+                    maturityAmount = calculateRDMaturity(amount, interestRate, months);
+                    interestEarned = maturityAmount - (amount * months);
+                }
+
+                return {
+                    depositAmount: amount.toFixed(2),
+                    maturityAmount: maturityAmount.toFixed(2),
+                    interestEarned: interestEarned.toFixed(2),
+                    interestRate: interestRate.toFixed(2),
+                    period: months,
+                    type: depositType
+                };
+            }, [depositAmount, depositPeriod, depositType, isSeniorCitizen]);
+
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('en-IN', {
+                    style: 'currency',
+                    currency: 'INR',
+                    maximumFractionDigits: 2
+                }).format(amount);
+            };
+
+            const formatCurrencyWholeNumber = (amount) => {
+                return new Intl.NumberFormat('en-IN', {
+                    style: 'currency',
+                    currency: 'INR',
+                    maximumFractionDigits: 0
+                }).format(amount);
+            };
+
+            const generatePDF = () => {
+                window.print();
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 sm:p-8">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 mb-6 border border-slate-600">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-3 rounded-xl shadow-lg">
+                                    <Calculator />
+                                </div>
+                                <div>
+                                    <h1 className="text-2xl sm:text-3xl font-bold text-white">AGVB Financial Calculator</h1>
+                                    <p className="text-sm text-slate-300 mt-1">Effective from 19-01-2026</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-2 mt-4">
+                                <button
+                                    onClick={() => setActiveTab('loan')}
+                                    className={\`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all \${
+                                        activeTab === 'loan'
+                                            ? 'bg-indigo-600 text-white shadow-lg'
+                                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                    }\`}
+                                >
+                                    <TrendingUp />
+                                    Loan EMI
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('fd')}
+                                    className={\`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all \${
+                                        activeTab === 'fd'
+                                            ? 'bg-indigo-600 text-white shadow-lg'
+                                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                    }\`}
+                                >
+                                    <Landmark />
+                                    RD/RIPC
+                                </button>
+                            </div>
+                            
+                            <div className="text-right mt-4">
+                                <p className="text-xs text-slate-400">Developed by <span className="text-indigo-400 font-semibold">Rahul Nath</span></p>
+                            </div>
+                        </div>
+
+                        {activeTab === 'loan' && (
+                            <div>
+                                <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 mb-6 border border-slate-600">
+                                    <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                                        <TrendingUp />
+                                        Loan Details
+                                    </h2>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                Select Loan Type
+                                            </label>
+                                            <select
+                                                value={loanType}
+                                                onChange={(e) => setLoanType(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-900 border-2 border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                                            >
+                                                <option value="">-- Select Loan Type --</option>
+                                                {Object.entries(loanCategories).map(([category, loans]) => (
+                                                    <optgroup key={category} label={category}>
+                                                        {loans.map((loan) => (
+                                                            <option key={loan.category} value={loan.category}>
+                                                                {loan.name} - {loan.rate}% p.a.
+                                                            </option>
+                                                        ))}
+                                                    </optgroup>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                Loan Amount (₹)
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                                    <IndianRupee />
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    value={loanAmount}
+                                                    onChange={(e) => setLoanAmount(e.target.value)}
+                                                    placeholder="Enter loan amount"
+                                                    className="w-full pl-12 pr-4 py-3 bg-slate-900 border-2 border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-slate-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                Loan Tenure (Months)
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                                    <Calendar />
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    value={emiMonths}
+                                                    onChange={(e) => setEmiMonths(e.target.value)}
+                                                    placeholder="Enter number of months"
+                                                    className="w-full pl-12 pr-4 py-3 bg-slate-900 border-2 border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-slate-500"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-2">
+                                                Common: 12, 24, 36, 60, 84, 120, 180, 240 months
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {results && (
+                                    <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-600">
+                                        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+                                            <h2 className="text-xl font-semibold text-white">Calculation Results</h2>
+                                            <button
+                                                onClick={generatePDF}
+                                                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-md"
+                                            >
+                                                <Printer />
+                                                <span className="hidden sm:inline">Print</span>
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 mb-6 shadow-2xl">
+                                            <p className="text-sm text-indigo-200 mb-2">Monthly EMI</p>
+                                            <p className="text-5xl font-bold text-white">{formatCurrencyWholeNumber(results.emi)}</p>
+                                            <p className="text-sm text-indigo-200 mt-3">at {results.interestRate}% p.a. for {emiMonths} months</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <div className="bg-slate-900 rounded-xl p-5 border border-slate-600">
+                                                <p className="text-sm text-slate-400 mb-1">Principal Amount</p>
+                                                <p className="text-2xl font-bold text-blue-400">{formatCurrency(results.principal)}</p>
+                                            </div>
+                                            <div className="bg-slate-900 rounded-xl p-5 border border-slate-600">
+                                                <p className="text-sm text-slate-400 mb-1">Total Interest</p>
+                                                <p className="text-2xl font-bold text-orange-400">{formatCurrency(results.totalInterest)}</p>
+                                            </div>
+                                            <div className="bg-slate-900 rounded-xl p-5 border border-slate-600">
+                                                <p className="text-sm text-slate-400 mb-1">Total Payment</p>
+                                                <p className="text-2xl font-bold text-green-400">{formatCurrency(results.totalPayment)}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-br from-amber-900 to-orange-900 rounded-xl p-6 mb-6 border-2 border-amber-600">
+                                            <h3 className="text-lg font-bold text-amber-200 mb-4">Additional Charges (Upfront)</h3>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center pb-2 border-b border-amber-700">
+                                                    <span className="text-amber-100">Processing Fee (1.18%)</span>
+                                                    <span className="font-bold text-amber-200">{formatCurrency(results.processingFee)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center pb-2 border-b border-amber-700">
+                                                    <span className="text-amber-100">Documentation Charge</span>
+                                                    <span className="font-bold text-amber-200">{formatCurrency(results.documentationCharge)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center pt-2">
+                                                    <span className="text-amber-100 font-semibold">Total Upfront Charges</span>
+                                                    <span className="font-bold text-xl text-amber-300">{formatCurrency(results.totalFees)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-6 mb-6 shadow-2xl">
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-sm text-orange-100 mb-1">Total Cost of Loan</p>
+                                                    <p className="text-xs text-orange-200">(EMI Payments + Upfront Charges)</p>
+                                                </div>
+                                                <p className="text-4xl font-bold text-white">{formatCurrency(results.totalCostWithFees)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mt-6 bg-slate-800 border-l-4 border-indigo-500 p-4 rounded-lg">
+                                    <p className="text-sm text-slate-300">
+                                        <strong className="text-indigo-400">Note:</strong> Processing fee: 1.18%. Documentation charges as per AGVB circular. Rates effective from 19-01-2026.
+                                    </p>
+                                </div>
+
+                                <div className="mt-4 text-center">
+                                    <p className="text-sm text-slate-500">
+                                        Developed with ❤️ by <span className="text-indigo-400 font-bold">Rahul Nath</span>
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'fd' && (
+                            <div>
+                                <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 mb-6 border border-slate-600">
+                                    <h2 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                                        <Landmark />
+                                        Deposit Calculator
+                                    </h2>
+
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-3">
+                                                Select Deposit Type
+                                            </label>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <button
+                                                    onClick={() => setDepositType('rd')}
+                                                    className={\`p-4 rounded-lg font-medium transition-all \${
+                                                        depositType === 'rd'
+                                                            ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400'
+                                                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                                    }\`}
+                                                >
+                                                    <div className="text-lg font-bold">RD</div>
+                                                    <div className="text-xs mt-1">Recurring Deposit</div>
+                                                </button>
+                                                <button
+                                                    onClick={() => setDepositType('ripc')}
+                                                    className={\`p-4 rounded-lg font-medium transition-all \${
+                                                        depositType === 'ripc'
+                                                            ? 'bg-indigo-600 text-white shadow-lg ring-2 ring-indigo-400'
+                                                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                                    }\`}
+                                                >
+                                                    <div className="text-lg font-bold">RIPC</div>
+                                                    <div className="text-xs mt-1">Recurring IPC</div>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                {depositType === 'rd' ? 'Monthly Deposit Amount (₹)' : 'Deposit Amount (₹)'}
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                                    <IndianRupee />
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    value={depositAmount}
+                                                    onChange={(e) => setDepositAmount(e.target.value)}
+                                                    placeholder={depositType === 'rd' ? 'Enter monthly amount' : 'Enter deposit amount'}
+                                                    className="w-full pl-12 pr-4 py-3 bg-slate-900 border-2 border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-slate-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                                                Deposit Period (Months)
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                                                    <Calendar />
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    value={depositPeriod}
+                                                    onChange={(e) => setDepositPeriod(e.target.value)}
+                                                    placeholder="Enter period in months"
+                                                    className="w-full pl-12 pr-4 py-3 bg-slate-900 border-2 border-slate-600 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all placeholder-slate-500"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-2">
+                                                Common periods: 6, 12, 24, 36, 60, 120 months
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-slate-900 rounded-lg p-4 border border-slate-600">
+                                            <label className="flex items-center gap-3 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSeniorCitizen}
+                                                    onChange={(e) => setIsSeniorCitizen(e.target.checked)}
+                                                    className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 focus:ring-2 bg-slate-700 border-slate-500"
+                                                />
+                                                <div>
+                                                    <span className="text-slate-200 font-medium">Senior Citizen</span>
+                                                    <p className="text-xs text-slate-400 mt-1">
+                                                        Get additional 0.50% interest (for deposits 1 year and above)
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {depositResults && (
+                                    <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-600">
+                                        <h2 className="text-xl font-semibold text-white mb-6">Maturity Calculation</h2>
+                                        
+                                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl p-8 mb-6 shadow-2xl">
+                                            <p className="text-sm text-green-200 mb-2">Maturity Amount</p>
+                                            <p className="text-5xl font-bold text-white">{formatCurrencyWholeNumber(depositResults.maturityAmount)}</p>
+                                            <p className="text-sm text-green-200 mt-3">at {depositResults.interestRate}% p.a. for {depositPeriod} months</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                            <div className="bg-slate-900 rounded-xl p-5 border border-slate-600">
+                                                <p className="text-sm text-slate-400 mb-1">
+                                                    {depositType === 'rd' ? 'Total Investment' : 'Principal Amount'}
+                                                </p>
+                                                <p className="text-2xl font-bold text-blue-400">
+                                                    {depositType === 'rd' 
+                                                        ? formatCurrency(parseFloat(depositResults.depositAmount) * depositResults.period)
+                                                        : formatCurrency(depositResults.depositAmount)
+                                                    }
+                                                </p>
+                                            </div>
+                                            <div className="bg-slate-900 rounded-xl p-5 border border-slate-600">
+                                                <p className="text-sm text-slate-400 mb-1">Interest Earned</p>
+                                                <p className="text-2xl font-bold text-green-400">{formatCurrency(depositResults.interestEarned)}</p>
+                                            </div>
+                                            <div className="bg-slate-900 rounded-xl p-5 border border-slate-600">
+                                                <p className="text-sm text-slate-400 mb-1">Interest Rate</p>
+                                                <p className="text-2xl font-bold text-purple-400">{depositResults.interestRate}%</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="mt-6 bg-slate-800 border-l-4 border-indigo-500 p-4 rounded-lg">
+                                    <p className="text-sm text-slate-300">
+                                        <strong className="text-indigo-400">Note:</strong> Quarterly compounding for RIPC. Senior citizens get +0.50% for 1 year+ deposits. Rates effective from 19-01-2026.
+                                    </p>
+                                </div>
+
+                                <div className="mt-4 text-center">
+                                    <p className="text-sm text-slate-500">
+                                        Developed with ❤️ by <span className="text-indigo-400 font-bold">Rahul Nath</span>
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<FinancialCalculator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
